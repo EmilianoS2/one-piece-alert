@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:tcbonepiecechapters.com)",
+      "Bash(pip install -r requirements.txt)",
+      "Bash(python -c \"import scraper; ch = scraper.get_latest_chapter\\(\\); print\\(ch if ch else ''SCRAPER RETURNED NONE''\\)\")",
+      "Bash(python -c \"import scraper; ch = scraper.get_latest_chapter\\(\\); print\\(ch\\)\")"
+    ]
+  }
+}
