@@ -77,13 +77,7 @@ async def check_for_new_chapter():
                   "Check that the bot has access to the channel.")
             return
 
-        # Change "@everyone" to "@here" or remove it if you don't want a ping
-        message = (
-            f"@everyone\n"
-            f"**A new One Piece chapter is out!**\n"
-            f"**{latest['title']}**\n"
-            f"{latest['url']}"
-        )
+        message = f"<@&1477178126156169377> NEW CHAPTER ALERT! - {latest['url']}"
 
         await channel.send(message)
         save_last_chapter(latest)
