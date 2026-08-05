@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import discord
 from discord.ext import tasks
@@ -13,7 +14,14 @@ load_dotenv()
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
-LAST_CHAPTER_FILE = "last_chapter.json"
+
+# Host containers run on UTC, which would shift the release-day window and the
+# polling schedule. Resolve the zone explicitly so it's wrong loudly, not silently.
+LOCAL_TZ = ZoneInfo(os.getenv("TZ", "America/Los_Angeles"))
+
+# Overridable so a mounted volume can hold this across restarts — on an ephemeral
+# filesystem a lost file makes the bot re-baseline and skip one chapter's alert.
+LAST_CHAPTER_FILE = os.getenv("LAST_CHAPTER_FILE", "last_chapter.json")
 
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
@@ -66,7 +74,7 @@ RELEASE_DAYS = (2, 3, 4, 5)
 
 @tasks.loop(minutes=30)
 async def check_for_new_chapter():
-    if datetime.now().weekday() not in RELEASE_DAYS:
+    if datetime.now(LOCAL_TZ).weekday() not in RELEASE_DAYS:
         print("[Bot] No chapters release today — skipping check.")
         return
 
@@ -106,7 +114,7 @@ async def before_check():
     # Align the loop to the next :00:45 or :30:45 wall-clock mark so polling lines
     # up with TCB's release times, regardless of when the bot was started. The 45s
     # offset gives the site a moment to actually publish before we scrape.
-    now = datetime.now()
+    now = datetime.now(LOCAL_TZ)
     next_mark = now.replace(second=45, microsecond=0) + timedelta(minutes=(-now.minute) % 30)
     if next_mark <= now:
         next_mark += timedelta(minutes=30)
