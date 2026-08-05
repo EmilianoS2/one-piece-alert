@@ -1,5 +1,7 @@
+import asyncio
 import json
 import os
+from datetime import datetime, timedelta
 
 import discord
 from discord.ext import tasks
@@ -57,8 +59,17 @@ async def on_ready():
 
 # ── Polling task ───────────────────────────────────────────────────────────────
 
-@tasks.loop(minutes=15)
+# One Piece chapters only release Wed–Sat, so don't scrape on other days.
+# (Python weekday(): Mon=0 … Sun=6)
+RELEASE_DAYS = (2, 3, 4, 5)
+
+
+@tasks.loop(minutes=30)
 async def check_for_new_chapter():
+    if datetime.now().weekday() not in RELEASE_DAYS:
+        print("[Bot] No chapters release today — skipping check.")
+        return
+
     print("[Bot] Checking for new chapter...")
 
     latest = scraper.get_latest_chapter()
@@ -91,6 +102,18 @@ async def check_for_new_chapter():
 async def before_check():
     # Wait until the bot is fully connected before starting the loop
     await client.wait_until_ready()
+
+    # Align the loop to the next :00:45 or :30:45 wall-clock mark so polling lines
+    # up with TCB's release times, regardless of when the bot was started. The 45s
+    # offset gives the site a moment to actually publish before we scrape.
+    now = datetime.now()
+    next_mark = now.replace(second=45, microsecond=0) + timedelta(minutes=(-now.minute) % 30)
+    if next_mark <= now:
+        next_mark += timedelta(minutes=30)
+
+    wait_seconds = (next_mark - now).total_seconds()
+    print(f"[Bot] Syncing to the clock — waiting {wait_seconds:.0f}s until {next_mark:%H:%M:%S}.")
+    await asyncio.sleep(wait_seconds)
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────
